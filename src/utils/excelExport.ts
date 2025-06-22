@@ -6,7 +6,24 @@ export const exportToExcel = (transactions: Transaction[]) => {
   // Create a new workbook
   const workbook = XLSX.utils.book_new();
   
-  // Prepare the data with headers
+  // Calculate summary data
+  const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalTransactions = transactions.length;
+  const uniqueCustomers = new Set(transactions.map(t => t.customerName)).size;
+
+  // Create summary section data
+  const summaryData = [
+    ['RENT PAYMENTS SUMMARY', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['Total Income:', `$${totalAmount.toFixed(2)}`, '', '', '', ''],
+    ['Total Transactions:', totalTransactions.toString(), '', '', '', ''],
+    ['Unique Customers:', uniqueCustomers.toString(), '', '', '', ''],
+    ['Report Date:', new Date().toLocaleDateString(), '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', '']
+  ];
+
+  // Prepare transaction table headers
   const headers = [
     'Customer Name',
     'Payment Date',
@@ -17,7 +34,7 @@ export const exportToExcel = (transactions: Transaction[]) => {
   ];
 
   // Transform transactions data
-  const data = [
+  const transactionData = [
     headers,
     ...transactions.map(transaction => [
       transaction.customerName,
@@ -29,8 +46,14 @@ export const exportToExcel = (transactions: Transaction[]) => {
     ])
   ];
 
+  // Combine summary and transaction data
+  const allData = [
+    ...summaryData,
+    ...transactionData
+  ];
+
   // Create worksheet
-  const worksheet = XLSX.utils.aoa_to_sheet(data);
+  const worksheet = XLSX.utils.aoa_to_sheet(allData);
 
   // Set column widths
   const columnWidths = [
@@ -43,95 +66,83 @@ export const exportToExcel = (transactions: Transaction[]) => {
   ];
   worksheet['!cols'] = columnWidths;
 
-  // Style the header row
-  const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:F1');
-  
-  // Apply header styling (basic styling that works with xlsx)
-  for (let col = range.s.c; col <= range.e.c; col++) {
-    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-    if (!worksheet[cellAddress]) worksheet[cellAddress] = { t: 's', v: '' };
-    
-    // Set cell style properties
-    worksheet[cellAddress].s = {
-      font: { bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "16A34A" } }, // Green background
+  // Style the summary section
+  const summaryHeaderCell = 'A1';
+  if (worksheet[summaryHeaderCell]) {
+    worksheet[summaryHeaderCell].s = {
+      font: { bold: true, size: 16, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "1F2937" } }, // Dark gray background
       alignment: { horizontal: "center" },
       border: {
-        top: { style: "thin", color: { rgb: "000000" } },
-        bottom: { style: "thin", color: { rgb: "000000" } },
-        left: { style: "thin", color: { rgb: "000000" } },
-        right: { style: "thin", color: { rgb: "000000" } }
+        top: { style: "thick", color: { rgb: "000000" } },
+        bottom: { style: "thick", color: { rgb: "000000" } },
+        left: { style: "thick", color: { rgb: "000000" } },
+        right: { style: "thick", color: { rgb: "000000" } }
       }
     };
   }
 
-  // Style data rows with alternating colors
-  for (let row = 1; row <= transactions.length; row++) {
-    for (let col = range.s.c; col <= range.e.c; col++) {
+  // Style summary data rows (rows 3-6)
+  for (let row = 2; row <= 5; row++) {
+    for (let col = 0; col < 2; col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-      if (!worksheet[cellAddress]) continue;
-      
+      if (worksheet[cellAddress]) {
+        worksheet[cellAddress].s = {
+          font: { bold: col === 0, size: 11 },
+          fill: { fgColor: { rgb: col === 0 ? "E5E7EB" : "F3F4F6" } }, // Light gray backgrounds
+          alignment: { horizontal: col === 0 ? "left" : "right" },
+          border: {
+            top: { style: "thin", color: { rgb: "9CA3AF" } },
+            bottom: { style: "thin", color: { rgb: "9CA3AF" } },
+            left: { style: "thin", color: { rgb: "9CA3AF" } },
+            right: { style: "thin", color: { rgb: "9CA3AF" } }
+          }
+        };
+      }
+    }
+  }
+
+  // Style transaction table headers (row 9, index 8)
+  const headerRowIndex = summaryData.length;
+  for (let col = 0; col < headers.length; col++) {
+    const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex, c: col });
+    if (worksheet[cellAddress]) {
       worksheet[cellAddress].s = {
-        fill: { 
-          fgColor: { 
-            rgb: row % 2 === 0 ? "F0FDF4" : "FFFFFF" // Light green for even rows
-          } 
-        },
+        font: { bold: true, color: { rgb: "FFFFFF" }, size: 12 },
+        fill: { fgColor: { rgb: "059669" } }, // Emerald green background
+        alignment: { horizontal: "center" },
         border: {
-          top: { style: "thin", color: { rgb: "E5E7EB" } },
-          bottom: { style: "thin", color: { rgb: "E5E7EB" } },
-          left: { style: "thin", color: { rgb: "E5E7EB" } },
-          right: { style: "thin", color: { rgb: "E5E7EB" } }
-        },
-        alignment: { 
-          horizontal: col === 3 ? "right" : "left" // Right align amount column
+          top: { style: "thick", color: { rgb: "000000" } },
+          bottom: { style: "thick", color: { rgb: "000000" } },
+          left: { style: "thick", color: { rgb: "000000" } },
+          right: { style: "thick", color: { rgb: "000000" } }
         }
       };
     }
   }
 
-  // Add summary section
-  const summaryStartRow = transactions.length + 3;
-  const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
-  const totalTransactions = transactions.length;
-  const uniqueCustomers = new Set(transactions.map(t => t.customerName)).size;
-
-  // Add summary data
-  const summaryData = [
-    ['SUMMARY', '', '', '', '', ''],
-    ['Total Income:', `$${totalAmount.toFixed(2)}`, '', '', '', ''],
-    ['Total Transactions:', totalTransactions.toString(), '', '', '', ''],
-    ['Unique Customers:', uniqueCustomers.toString(), '', '', '', '']
-  ];
-
-  // Add summary to worksheet
-  XLSX.utils.sheet_add_aoa(worksheet, summaryData, { origin: `A${summaryStartRow}` });
-
-  // Style summary section
-  for (let i = 0; i < summaryData.length; i++) {
-    const rowIndex = summaryStartRow + i - 1;
-    
-    if (i === 0) {
-      // Summary header
-      const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+  // Style transaction data rows with alternating colors
+  for (let row = 0; row < transactions.length; row++) {
+    const actualRowIndex = headerRowIndex + 1 + row;
+    for (let col = 0; col < headers.length; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: actualRowIndex, c: col });
       if (worksheet[cellAddress]) {
         worksheet[cellAddress].s = {
-          font: { bold: true, size: 14, color: { rgb: "16A34A" } },
-          fill: { fgColor: { rgb: "F0FDF4" } },
-          alignment: { horizontal: "center" }
+          fill: { 
+            fgColor: { 
+              rgb: row % 2 === 0 ? "DCFCE7" : "F0FDF4" // Light green alternating colors
+            } 
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "10B981" } },
+            bottom: { style: "thin", color: { rgb: "10B981" } },
+            left: { style: "thin", color: { rgb: "10B981" } },
+            right: { style: "thin", color: { rgb: "10B981" } }
+          },
+          alignment: { 
+            horizontal: col === 3 ? "right" : "left" // Right align amount column
+          }
         };
-      }
-    } else {
-      // Summary data
-      for (let col = 0; col < 2; col++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: col });
-        if (worksheet[cellAddress]) {
-          worksheet[cellAddress].s = {
-            font: { bold: col === 0 },
-            fill: { fgColor: { rgb: "F9FAFB" } },
-            alignment: { horizontal: col === 0 ? "left" : "right" }
-          };
-        }
       }
     }
   }

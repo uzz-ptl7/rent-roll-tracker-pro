@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ const Index = () => {
       ...transaction,
       id: Date.now().toString(),
     };
-    setTransactions(prev => [newTransaction, ...prev]);
+    setTransactions(prev => [...prev, newTransaction]);
     toast({
       title: "Payment Added",
       description: "Rent payment has been successfully recorded.",
