@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 const Index = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [activeTab, setActiveTab] = useState("add-payment");
 
   const handleAddTransaction = (transaction: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
@@ -31,6 +31,7 @@ const Index = () => {
       prev.map(t => t.id === updatedTransaction.id ? updatedTransaction : t)
     );
     setEditingTransaction(null);
+    setActiveTab("transactions");
     toast({
       title: "Payment Updated",
       description: "Rent payment has been successfully updated.",
@@ -43,6 +44,16 @@ const Index = () => {
       title: "Payment Deleted",
       description: "Rent payment has been successfully deleted.",
     });
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setActiveTab("add-payment");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTransaction(null);
+    setActiveTab("transactions");
   };
 
   const handleExportToExcel = () => {
@@ -133,7 +144,7 @@ const Index = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="add-payment" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 bg-green-100">
                 <TabsTrigger 
                   value="add-payment" 
@@ -154,14 +165,14 @@ const Index = () => {
                 <PaymentForm 
                   onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction}
                   editingTransaction={editingTransaction}
-                  onCancelEdit={() => setEditingTransaction(null)}
+                  onCancelEdit={handleCancelEdit}
                 />
               </TabsContent>
               
               <TabsContent value="transactions" className="mt-6">
                 <TransactionTable 
                   transactions={transactions}
-                  onEdit={setEditingTransaction}
+                  onEdit={handleEditTransaction}
                   onDelete={handleDeleteTransaction}
                 />
               </TabsContent>
