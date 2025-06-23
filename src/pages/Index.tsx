@@ -1,81 +1,240 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, FileSpreadsheet, LogOut } from "lucide-react";
+import { FileSpreadsheet, LogOut } from "lucide-react";
 import PaymentForm from "@/components/PaymentForm";
-import TransactionTable from "@/components/TransactionTable";
-import LoginForm from "@/components/LoginForm";
-import PasswordSettings from "@/components/PasswordSettings";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Transaction } from "@/types/transaction";
-import { exportToExcel } from "@/utils/excelExport";
+import TransactionTable from "@/components/TransactionTable";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import * as XLSX from "xlsx";
+
+const LoginForm: React.FC<{ onLoginSuccess: () => void }> = ({ onLoginSuccess }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) {
+      toast({
+        title: "Login Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Login Success",
+        description: "Welcome back!",
+      });
+      onLoginSuccess();
+    }
+  };
+
+  return (
+    <Card className="max-w-md mx-auto mt-20 p-6">
+      <CardHeader>
+        <CardTitle>Login</CardTitle>
+        <CardDescription>Please enter your credentials</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block mb-1" htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              required
+              className="w-full px-3 py-2 border rounded text-black"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+            />
+          </div>
+          <div>
+            <label className="block mb-1" htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              required
+              className="w-full px-3 py-2 border rounded text-black"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </div>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Logging in..." : "Login"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
 
 const Index = () => {
-  const { isAuthenticated, logout, saveTransactions, loadTransactions } = useAuth();
+  const [user, setUser] = useState<null | import('@supabase/supabase-js').User>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [activeTab, setActiveTab] = useState("add-payment");
+  const [loading, setLoading] = useState(true);
 
-  // Load transactions from localStorage when authenticated
+  // Fetch session and user on mount
   useEffect(() => {
-    if (isAuthenticated) {
-      const loadedTransactions = loadTransactions();
-      setTransactions(loadedTransactions);
-    }
-  }, [isAuthenticated, loadTransactions]);
-
-  // Save transactions to localStorage whenever transactions change
-  useEffect(() => {
-    if (isAuthenticated && transactions.length >= 0) {
-      saveTransactions(transactions);
-    }
-  }, [transactions, isAuthenticated, saveTransactions]);
-
-  const handleAddTransaction = (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: Date.now().toString(),
+    const fetchUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user ?? null);
+      if (data.session?.user) {
+        fetchTransactions();
+      } else {
+        setLoading(false);
+      }
     };
-    setTransactions(prev => [...prev, newTransaction]);
-    toast({
-      title: "Payment Added",
-      description: "Rent payment has been successfully recorded.",
-    });
-  };
+    fetchUser();
 
-  const handleUpdateTransaction = (updatedTransaction: Transaction) => {
-    setTransactions(prev => 
-      prev.map(t => t.id === updatedTransaction.id ? updatedTransaction : t)
+    // Listen to auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchTransactions();
+        } else {
+          setTransactions([]);
+          setLoading(false);
+        }
+      }
     );
-    setEditingTransaction(null);
-    setActiveTab("transactions");
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const fetchTransactions = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .order("paymentdate", { ascending: false });
+
+    if (error) {
+      console.error("Error loading transactions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load transactions.",
+        variant: "destructive",
+      });
+      setTransactions([]);
+    } else {
+      const mapped = data.map((item: any) => ({
+        id: String(item.id),
+        customerName: item.customername,
+        paymentDate: item.paymentdate,
+        monthPaidFor: item.monthpaidfor,
+        paymentMethod: item.paymentmethod as "cash" | "mobilemoney",
+        amount: item.amount,
+        momoTransactionId: item.momotransactionid,
+      }));
+      setTransactions(mapped);
+    }
+    setLoading(false);
+  };
+
+  // Handler to add a new transaction
+  const handleAddTransaction = async (transaction: Transaction) => {
+    const { error } = await supabase.from("transactions").insert([
+      {
+        customername: transaction.customerName,
+        paymentdate: transaction.paymentDate,
+        monthpaidfor: transaction.monthPaidFor,
+        paymentmethod: transaction.paymentMethod,
+        amount: transaction.amount,
+        momotransactionid: transaction.momoTransactionId,
+      },
+    ]);
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add transaction.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Transaction added successfully.",
+      });
+      fetchTransactions();
+      setActiveTab("transactions");
+    }
+  };
+
+  // Handler to update an existing transaction
+  const handleUpdateTransaction = async (transaction: Transaction) => {
+    const { error } = await supabase
+      .from("transactions")
+      .update({
+        customername: transaction.customerName,
+        paymentdate: transaction.paymentDate,
+        monthpaidfor: transaction.monthPaidFor,
+        paymentmethod: transaction.paymentMethod,
+        amount: transaction.amount,
+        momotransactionid: transaction.momoTransactionId,
+      })
+      .eq("id", Number(transaction.id));
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update transaction.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Transaction updated successfully.",
+      });
+      setEditingTransaction(null);
+      fetchTransactions();
+      setActiveTab("transactions");
+    }
+  };
+
+  // Handler to delete a transaction
+  const handleDeleteTransaction = async (transactionId: string) => {
+    const { error } = await supabase.from("transactions").delete().eq("id", Number(transactionId));
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete transaction.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Transaction deleted successfully.",
+      });
+      fetchTransactions();
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     toast({
-      title: "Payment Updated",
-      description: "Rent payment has been successfully updated.",
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
     });
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-    toast({
-      title: "Payment Deleted",
-      description: "Rent payment has been successfully deleted.",
-    });
-  };
-
-  const handleEditTransaction = (transaction: Transaction) => {
-    setEditingTransaction(transaction);
-    setActiveTab("add-payment");
-  };
-
-  const handleCancelEdit = () => {
-    setEditingTransaction(null);
-    setActiveTab("transactions");
-  };
-
+  // Export to Excel with styling and summary
   const handleExportToExcel = () => {
     if (transactions.length === 0) {
       toast({
@@ -85,157 +244,151 @@ const Index = () => {
       });
       return;
     }
-    
-    exportToExcel(transactions);
+
+    // Calculate summary data
+    const totalTransactions = transactions.length;
+    const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+
+    // Prepare summary rows
+    const summaryRows = [
+      ["Summary"],
+      [`Total Transactions:`, totalTransactions],
+      [`Total Amount (RWF):`, totalAmount],
+      [], // empty row before data
+    ];
+
+    // Prepare transaction data rows (headers + data)
+    const header = ["Customer Name", "Payment Date", "Month Paid For", "Payment Method", "Amount (RWF)", "MoMo Transaction ID"];
+    const dataRows = transactions.map(t => [
+      t.customerName,
+      t.paymentDate,
+      t.monthPaidFor,
+      t.paymentMethod,
+      t.amount,
+      t.momoTransactionId || "",
+    ]);
+
+    // Combine summary and data
+    const worksheetData = [...summaryRows, header, ...dataRows];
+
+    // Create worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+    // Style header row (summary header + column headers)
+    const range = XLSX.utils.decode_range(worksheet['!ref']!);
+
+    // Bold "Summary" title in A1
+    worksheet["A1"].s = {
+      font: { bold: true, sz: 14 },
+    };
+
+    // Bold summary labels (A2, A3)
+    ["A2", "A3"].forEach((cell) => {
+      if (worksheet[cell]) {
+        worksheet[cell].s = {
+          font: { bold: true },
+        };
+      }
+    });
+
+    // Bold header row (A5:F5)
+    for (let C = 0; C <= 5; ++C) {
+      const cellRef = XLSX.utils.encode_cell({ r: 4, c: C });
+      if (worksheet[cellRef]) {
+        worksheet[cellRef].s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "B29DD9" } }, // light purple background
+          alignment: { horizontal: "center" },
+        };
+      }
+    }
+
+    // Set column widths for better readability
+    worksheet['!cols'] = [
+      { wch: 20 }, // Customer Name
+      { wch: 15 }, // Payment Date
+      { wch: 18 }, // Month Paid For
+      { wch: 15 }, // Payment Method
+      { wch: 15 }, // Amount (RWF)
+      { wch: 25 }, // MoMo Transaction ID
+    ];
+
+    // Create workbook and append sheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+
+    // Write file
+    XLSX.writeFile(workbook, "rent_transactions.xlsx");
+
     toast({
       title: "Export Successful",
-      description: "Transactions have been exported to Excel.",
+      description: "Transactions have been exported to Excel with summary.",
     });
   };
 
-  const handleLogout = () => {
-    logout();
-    setTransactions([]);
-    setEditingTransaction(null);
-    setActiveTab("add-payment");
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-    });
-  };
-
-  // Show login form if not authenticated
-  if (!isAuthenticated) {
-    return <LoginForm />;
+  if (!user) {
+    return <LoginForm onLoginSuccess={fetchTransactions} />;
   }
 
-  const totalIncome = transactions.reduce((sum, t) => sum + t.amount, 0);
-  const monthlyStats = transactions.reduce((acc, t) => {
-    const key = t.monthPaidFor;
-    acc[key] = (acc[key] || 0) + t.amount;
-    return acc;
-  }, {} as Record<string, number>);
+  if (loading) {
+    return <div className="p-6">Loading transactions...</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-muted/40 p-2 sm:p-4 lg:p-6">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-        {/* Header */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">Rent Roll Tracker Pro</h1>
-              <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">Manage your rental income with ease</p>
-            </div>
-            <div className="flex justify-center sm:justify-end gap-2 flex-wrap">
-              <ThemeToggle />
-              <PasswordSettings />
-              <Button 
-                onClick={handleLogout}
-                variant="outline"
-                size="sm"
-                className="border-destructive/50 text-destructive hover:bg-destructive/10"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
+    <div className="min-h-screen p-6 bg-background">
+      <Card>
+        <CardHeader className="flex justify-between items-center">
+          <div>
+            <CardTitle>Rent Roll Tracker Pro</CardTitle>
+            <CardDescription>Manage your rental income with ease</CardDescription>
           </div>
-        </div>
+          <div className="flex gap-2">
+            <Button onClick={handleExportToExcel} variant="outline" size="sm" className="flex items-center">
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Export to Excel
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              className="border-destructive/50 text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="add-payment">Add Payment</TabsTrigger>
+              <TabsTrigger value="transactions">Transaction List</TabsTrigger>
+            </TabsList>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          <Card className="bg-card/80 backdrop-blur-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm sm:text-base">Total Income</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">
-                ${totalIncome.toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-card/80 backdrop-blur-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm sm:text-base">Total Transactions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">
-                {transactions.length}
-              </div>
-            </CardContent>
-          </Card>
+            <TabsContent value="add-payment">
+              <PaymentForm
+                onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction}
+                editingTransaction={editingTransaction}
+                onCancelEdit={() => {
+                  setEditingTransaction(null);
+                  setActiveTab("transactions");
+                }}
+              />
+            </TabsContent>
 
-          <Card className="bg-card/80 backdrop-blur-sm sm:col-span-2 lg:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm sm:text-base">Active Customers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">
-                {new Set(transactions.map(t => t.customerName)).size}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <Card className="bg-card/90 backdrop-blur-sm">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <div>
-                <CardTitle>Rent Management</CardTitle>
-                <CardDescription className="text-sm">Track and manage your rental payments</CardDescription>
-              </div>
-              <Button 
-                onClick={handleExportToExcel}
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-              >
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Export to Excel
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-muted">
-                <TabsTrigger 
-                  value="add-payment" 
-                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
-                >
-                  <Plus className="w-4 h-4 mr-1 sm:mr-2" />
-                  <span className="hidden xs:inline">Add Payment</span>
-                  <span className="xs:hidden">Add</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="transactions"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
-                >
-                  <span className="hidden xs:inline">Transaction List</span>
-                  <span className="xs:hidden">List</span>
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="add-payment" className="mt-4 sm:mt-6">
-                <PaymentForm 
-                  onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction}
-                  editingTransaction={editingTransaction}
-                  onCancelEdit={handleCancelEdit}
-                />
-              </TabsContent>
-              
-              <TabsContent value="transactions" className="mt-4 sm:mt-6">
-                <TransactionTable 
-                  transactions={transactions}
-                  onEdit={handleEditTransaction}
-                  onDelete={handleDeleteTransaction}
-                />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
+            <TabsContent value="transactions">
+              <TransactionTable
+                transactions={transactions}
+                onEdit={(transaction) => {
+                  setEditingTransaction(transaction);
+                  setActiveTab("add-payment");
+                }}
+                onDelete={handleDeleteTransaction}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 };

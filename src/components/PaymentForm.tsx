@@ -2,41 +2,69 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Transaction } from "@/types/transaction";
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/integrations/supabase/types';
 import { supabase as supabaseClient } from "@/integrations/supabase/client";
+import type { Database } from '@/integrations/supabase/types';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 const supabase: SupabaseClient<Database> = supabaseClient as SupabaseClient<Database>;
 
+export interface Transaction {
+  id?: string | number; // id optional for new transactions
+  customerName: string;
+  paymentDate: string; // ISO date string
+  monthPaidFor: string;
+  paymentMethod: 'cash' | 'mobilemoney';
+  amount: number;
+  momoTransactionId?: string | null;
+}
+
 interface PaymentFormProps {
-  onSubmit: (transaction: Omit<Transaction, 'id'> | Transaction) => void;
+  onSubmit: (transaction: Transaction) => void;
   editingTransaction?: Transaction | null;
   onCancelEdit?: () => void;
 }
 
-const PaymentForm: React.FC<PaymentFormProps> = ({ 
-  onSubmit, 
-  editingTransaction, 
-  onCancelEdit 
+const PaymentForm: React.FC<PaymentFormProps> = ({
+  onSubmit,
+  editingTransaction,
+  onCancelEdit
 }) => {
   const [customerName, setCustomerName] = useState('');
-  const [paymentDate, setPaymentDate] = useState<Date>();
+  const [paymentDate, setPaymentDate] = useState<Date | undefined>(undefined);
   const [monthPaidFor, setMonthPaidFor] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mobilemoney'>('cash');
   const [amount, setAmount] = useState('');
   const [momoTransactionId, setMomoTransactionId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Your customer list — update or load dynamically as you want
   const [customers] = useState([
     'John Smith', 'Mary Johnson', 'David Brown', 'Sarah Wilson', 'Michael Davis'
   ]);
 
+  // Load values if editing
   useEffect(() => {
     if (editingTransaction) {
       setCustomerName(editingTransaction.customerName);
@@ -45,76 +73,50 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       setPaymentMethod(editingTransaction.paymentMethod);
       setAmount(editingTransaction.amount.toString());
       setMomoTransactionId(editingTransaction.momoTransactionId || '');
-    }
-  }, [editingTransaction]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!customerName || !paymentDate || !monthPaidFor || !amount) {
-      return;
-    }
-
-    const transactionData: Database['public']['Tables']['transactions']['Update'] = {
-      customerName,
-      paymentDate: paymentDate.toISOString().split('T')[0],
-      monthPaidFor,
-      paymentMethod,
-      amount: parseFloat(amount),
-      momoTransactionId: paymentMethod === 'mobilemoney' ? momoTransactionId || null : null,
-    };
-
-    try {
-      if (editingTransaction) {
-        console.log("Attempting update with ID:", editingTransaction?.id);
-        if (!editingTransaction.id) {
-          console.error("Editing transaction does not have a valid ID.");
-          alert("Error: Transaction ID is missing.");
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('transactions')
-          .update(transactionData)
-          .eq('id', editingTransaction.id);
-
-        if (error) {
-          console.error("Supabase update error:", error.message, error.details, error.hint);
-          alert("Error updating transaction: " + error.message);
-          return;
-        }
-
-      onSubmit({
-        id: editingTransaction.id,
-        customerName,
-        paymentDate: paymentDate.toISOString().split('T')[0],
-        monthPaidFor,
-        paymentMethod,
-        amount: parseFloat(amount),
-        momoTransactionId: paymentMethod === 'mobilemoney' ? momoTransactionId || null : null,
-        });
-      } else {
-        const { data, error } = await supabase
-          .from('transactions')
-          .insert(transactionData)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        onSubmit(data);
-      }
-
+    } else {
+      // Clear form if not editing
       setCustomerName('');
       setPaymentDate(undefined);
       setMonthPaidFor('');
       setPaymentMethod('cash');
       setAmount('');
       setMomoTransactionId('');
-    } catch (error) {
-      console.error('Supabase error:', error);
-      alert('There was an error saving the transaction. Please try again.');
     }
+  }, [editingTransaction]);
+
+  // Clear MoMo ID if payment method changes to cash
+  useEffect(() => {
+    if (paymentMethod === 'cash') {
+      setMomoTransactionId('');
+    }
+  }, [paymentMethod]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!customerName || !paymentDate || !monthPaidFor || !amount || isNaN(Number(amount))) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const transaction: Transaction = {
+      customerName,
+      paymentDate: format(paymentDate, 'yyyy-MM-dd'),
+      monthPaidFor,
+      paymentMethod,
+      amount: parseFloat(amount),
+      momoTransactionId: paymentMethod === 'mobilemoney' ? momoTransactionId || null : null,
+    };
+
+    if (editingTransaction && editingTransaction.id) {
+      transaction.id = editingTransaction.id;
+    }
+
+    onSubmit(transaction);
+
+    setIsSubmitting(false);
   };
 
   const handleCancel = () => {
@@ -131,11 +133,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-
   const currentYear = new Date().getFullYear();
   const monthOptions = months.flatMap(month => [
-    `${month} ${currentYear}`,
-    `${month} ${currentYear + 1}`
+    `${month} ${currentYear}`, `${month} ${currentYear + 1}`
   ]);
 
   return (
@@ -149,7 +149,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="customer">Customer Name</Label>
+              <Label htmlFor="customerName">Customer Name</Label>
               <Select value={customerName} onValueChange={setCustomerName}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer" />
@@ -192,7 +192,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="month">Month Paid For</Label>
+              <Label htmlFor="monthPaidFor">Month Paid For</Label>
               <Select value={monthPaidFor} onValueChange={setMonthPaidFor}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select month" />
@@ -208,7 +208,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="payment-method">Payment Method</Label>
+              <Label htmlFor="paymentMethod">Payment Method</Label>
               <Select value={paymentMethod} onValueChange={(value: 'cash' | 'mobilemoney') => setPaymentMethod(value)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -221,23 +221,23 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount ($)</Label>
+              <Label htmlFor="amount">Amount (RWF)</Label>
               <Input
                 id="amount"
                 type="number"
                 step="0.01"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="Enter amount"
+                placeholder="Enter amount in RWF"
                 required
               />
             </div>
 
             {paymentMethod === 'mobilemoney' && (
               <div className="space-y-2">
-                <Label htmlFor="momo-id">MoMo Transaction ID</Label>
+                <Label htmlFor="momoTransactionId">MoMo Transaction ID</Label>
                 <Input
-                  id="momo-id"
+                  id="momoTransactionId"
                   value={momoTransactionId}
                   onChange={(e) => setMomoTransactionId(e.target.value)}
                   placeholder="Enter transaction ID"
@@ -247,14 +247,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 pt-4">
-            <Button 
-              type="submit" 
-              className="flex-1"
-            >
-              {editingTransaction ? 'Update Payment' : 'Add Payment'}
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting
+                ? (editingTransaction ? 'Updating...' : 'Adding...')
+                : (editingTransaction ? 'Update Payment' : 'Add Payment')}
             </Button>
             {editingTransaction && (
-              <Button 
+              <Button
                 type="button"
                 variant="outline"
                 onClick={handleCancel}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -83,7 +82,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                   </TableCell>
                   <TableCell className="font-semibold text-primary text-xs sm:text-sm">
                     <div>
-                      ${transaction.amount.toFixed(2)}
+                      RWF {transaction.amount.toFixed(2)}
                       <div className="lg:hidden">
                         <Badge 
                           variant={transaction.paymentMethod === 'cash' ? 'secondary' : 'default'}
