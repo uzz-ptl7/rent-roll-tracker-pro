@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,11 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Transaction } from "@/types/transaction";
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
+
+const supabase: SupabaseClient<Database> = supabaseClient as SupabaseClient<Database>;
 
 interface PaymentFormProps {
   onSubmit: (transaction: Omit<Transaction, 'id'> | Transaction) => void;
@@ -44,35 +48,73 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     }
   }, [editingTransaction]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!customerName || !paymentDate || !monthPaidFor || !amount) {
       return;
     }
 
-    const transactionData = {
+    const transactionData: Database['public']['Tables']['transactions']['Update'] = {
       customerName,
       paymentDate: paymentDate.toISOString().split('T')[0],
       monthPaidFor,
       paymentMethod,
       amount: parseFloat(amount),
-      ...(paymentMethod === 'mobilemoney' && momoTransactionId && { momoTransactionId }),
+      momoTransactionId: paymentMethod === 'mobilemoney' ? momoTransactionId || null : null,
     };
 
-    if (editingTransaction) {
-      onSubmit({ ...transactionData, id: editingTransaction.id });
-    } else {
-      onSubmit(transactionData);
-    }
+    try {
+      if (editingTransaction) {
+        console.log("Attempting update with ID:", editingTransaction?.id);
+        if (!editingTransaction.id) {
+          console.error("Editing transaction does not have a valid ID.");
+          alert("Error: Transaction ID is missing.");
+          return;
+        }
 
-    // Reset form
-    setCustomerName('');
-    setPaymentDate(undefined);
-    setMonthPaidFor('');
-    setPaymentMethod('cash');
-    setAmount('');
-    setMomoTransactionId('');
+        const { data, error } = await supabase
+          .from('transactions')
+          .update(transactionData)
+          .eq('id', editingTransaction.id);
+
+        if (error) {
+          console.error("Supabase update error:", error.message, error.details, error.hint);
+          alert("Error updating transaction: " + error.message);
+          return;
+        }
+
+      onSubmit({
+        id: editingTransaction.id,
+        customerName,
+        paymentDate: paymentDate.toISOString().split('T')[0],
+        monthPaidFor,
+        paymentMethod,
+        amount: parseFloat(amount),
+        momoTransactionId: paymentMethod === 'mobilemoney' ? momoTransactionId || null : null,
+        });
+      } else {
+        const { data, error } = await supabase
+          .from('transactions')
+          .insert(transactionData)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        onSubmit(data);
+      }
+
+      setCustomerName('');
+      setPaymentDate(undefined);
+      setMonthPaidFor('');
+      setPaymentMethod('cash');
+      setAmount('');
+      setMomoTransactionId('');
+    } catch (error) {
+      console.error('Supabase error:', error);
+      alert('There was an error saving the transaction. Please try again.');
+    }
   };
 
   const handleCancel = () => {

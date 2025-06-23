@@ -59,7 +59,7 @@ const PasswordSettings = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-50">
+        <Button variant="outline" size="sm" className="border-green-300 text-green-800 hover:bg-gray-900 hover:text-gray-200">
           <Settings className="w-4 h-4 mr-2" />
           Change Password
         </Button>
