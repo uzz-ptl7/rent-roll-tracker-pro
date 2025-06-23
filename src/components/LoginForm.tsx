@@ -40,45 +40,45 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm border-green-200">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-green-800">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-muted/40 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm border">
+        <CardHeader className="text-center space-y-2">
+          <CardTitle className="text-2xl font-bold">
             Rent Roll Tracker Pro
           </CardTitle>
-          <CardDescription className="text-green-600">
+          <CardDescription>
             Sign in to access your rental management dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-green-700">Username</Label>
+              <Label htmlFor="username">Username</Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-green-500 w-4 h-4" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter username"
-                  className="pl-10 border-green-300 focus:border-green-500"
+                  className="pl-10"
                   required
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-green-700">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-green-500 w-4 h-4" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter password"
-                  className="pl-10 border-green-300 focus:border-green-500"
+                  className="pl-10"
                   required
                 />
               </div>
@@ -86,17 +86,17 @@ const LoginForm = () => {
 
             <Button 
               type="submit" 
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              className="w-full"
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
           
-          <div className="mt-6 p-3 bg-green-50 rounded-lg border border-green-200">
-            <p className="text-sm text-green-700 font-medium mb-1">Default Login:</p>
-            <p className="text-xs text-green-600">Username: family</p>
-            <p className="text-xs text-green-600">Password: rent2024</p>
+          <div className="mt-6 p-3 bg-muted rounded-lg border">
+            <p className="text-sm font-medium mb-1">Default Login:</p>
+            <p className="text-xs text-muted-foreground">Username: family</p>
+            <p className="text-xs text-muted-foreground">Password: rent2024</p>
           </div>
         </CardContent>
       </Card>

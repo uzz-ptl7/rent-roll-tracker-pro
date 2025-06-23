@@ -97,22 +97,22 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   ]);
 
   return (
-    <Card className="bg-white border-green-200">
+    <Card className="bg-card">
       <CardHeader>
-        <CardTitle className="text-green-800">
+        <CardTitle>
           {editingTransaction ? 'Edit Payment' : 'Add New Payment'}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 sm:p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="customer">Customer Name</Label>
               <Select value={customerName} onValueChange={setCustomerName}>
-                <SelectTrigger className="border-green-300 focus:border-green-500">
+                <SelectTrigger>
                   <SelectValue placeholder="Select customer" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-green-200">
+                <SelectContent className="bg-popover z-50">
                   {customers.map((customer) => (
                     <SelectItem key={customer} value={customer}>
                       {customer}
@@ -129,7 +129,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal border-green-300 focus:border-green-500",
+                      "w-full justify-start text-left font-normal",
                       !paymentDate && "text-muted-foreground"
                     )}
                   >
@@ -137,13 +137,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                     {paymentDate ? format(paymentDate, "PPP") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white border-green-200" align="start">
+                <PopoverContent className="w-auto p-0 bg-popover z-50" align="start">
                   <Calendar
                     mode="single"
                     selected={paymentDate}
                     onSelect={setPaymentDate}
                     initialFocus
-                    className="p-3 pointer-events-auto"
+                    className="p-3"
                   />
                 </PopoverContent>
               </Popover>
@@ -152,10 +152,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             <div className="space-y-2">
               <Label htmlFor="month">Month Paid For</Label>
               <Select value={monthPaidFor} onValueChange={setMonthPaidFor}>
-                <SelectTrigger className="border-green-300 focus:border-green-500">
+                <SelectTrigger>
                   <SelectValue placeholder="Select month" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-green-200">
+                <SelectContent className="bg-popover z-50 max-h-60">
                   {monthOptions.map((month) => (
                     <SelectItem key={month} value={month}>
                       {month}
@@ -168,10 +168,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             <div className="space-y-2">
               <Label htmlFor="payment-method">Payment Method</Label>
               <Select value={paymentMethod} onValueChange={(value: 'cash' | 'mobilemoney') => setPaymentMethod(value)}>
-                <SelectTrigger className="border-green-300 focus:border-green-500">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-green-200">
+                <SelectContent className="bg-popover z-50">
                   <SelectItem value="cash">Cash</SelectItem>
                   <SelectItem value="mobilemoney">Mobile Money (MoMo)</SelectItem>
                 </SelectContent>
@@ -187,7 +187,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="Enter amount"
-                className="border-green-300 focus:border-green-500"
                 required
               />
             </div>
@@ -200,16 +199,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   value={momoTransactionId}
                   onChange={(e) => setMomoTransactionId(e.target.value)}
                   placeholder="Enter transaction ID"
-                  className="border-green-300 focus:border-green-500"
                 />
               </div>
             )}
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex flex-col sm:flex-row gap-2 pt-4">
             <Button 
               type="submit" 
-              className="bg-green-600 hover:bg-green-700 text-white flex-1"
+              className="flex-1"
             >
               {editingTransaction ? 'Update Payment' : 'Add Payment'}
             </Button>
@@ -218,7 +216,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 type="button"
                 variant="outline"
                 onClick={handleCancel}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="flex-1 sm:flex-none"
               >
                 Cancel
               </Button>

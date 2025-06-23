@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Delete } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { Transaction } from "@/types/transaction";
 import {
   AlertDialog,
@@ -31,11 +31,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 }) => {
   if (transactions.length === 0) {
     return (
-      <Card className="bg-white border-green-200">
+      <Card className="bg-card">
         <CardContent className="pt-6">
           <div className="text-center py-8">
-            <p className="text-gray-500 text-lg">No transactions recorded yet</p>
-            <p className="text-gray-400">Add your first payment to get started</p>
+            <p className="text-muted-foreground text-lg">No transactions recorded yet</p>
+            <p className="text-muted-foreground/70">Add your first payment to get started</p>
           </div>
         </CardContent>
       </Card>
@@ -43,68 +43,88 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   }
 
   return (
-    <Card className="bg-white border-green-200">
+    <Card className="bg-card">
       <CardHeader>
-        <CardTitle className="text-green-800">Transaction History</CardTitle>
+        <CardTitle>Transaction History</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 sm:p-6">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-green-200">
-                <TableHead className="text-green-700">Customer</TableHead>
-                <TableHead className="text-green-700">Payment Date</TableHead>
-                <TableHead className="text-green-700">Month Paid For</TableHead>
-                <TableHead className="text-green-700">Amount</TableHead>
-                <TableHead className="text-green-700">Payment Method</TableHead>
-                <TableHead className="text-green-700">Transaction ID</TableHead>
-                <TableHead className="text-green-700 text-center">Actions</TableHead>
+              <TableRow>
+                <TableHead className="text-xs sm:text-sm">Customer</TableHead>
+                <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Payment Date</TableHead>
+                <TableHead className="text-xs sm:text-sm hidden md:table-cell">Month Paid For</TableHead>
+                <TableHead className="text-xs sm:text-sm">Amount</TableHead>
+                <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Payment Method</TableHead>
+                <TableHead className="text-xs sm:text-sm hidden lg:table-cell">Transaction ID</TableHead>
+                <TableHead className="text-xs sm:text-sm text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {transactions.map((transaction) => (
-                <TableRow key={transaction.id} className="border-green-100 hover:bg-green-50/50">
-                  <TableCell className="font-medium">{transaction.customerName}</TableCell>
-                  <TableCell>{new Date(transaction.paymentDate).toLocaleDateString()}</TableCell>
-                  <TableCell>{transaction.monthPaidFor}</TableCell>
-                  <TableCell className="font-semibold text-green-700">
-                    ${transaction.amount.toFixed(2)}
+                <TableRow key={transaction.id} className="hover:bg-muted/50">
+                  <TableCell className="font-medium text-xs sm:text-sm">
+                    <div>
+                      <div>{transaction.customerName}</div>
+                      <div className="text-xs text-muted-foreground sm:hidden">
+                        {new Date(transaction.paymentDate).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-muted-foreground md:hidden">
+                        {transaction.monthPaidFor}
+                      </div>
+                    </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs sm:text-sm hidden sm:table-cell">
+                    {new Date(transaction.paymentDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-xs sm:text-sm hidden md:table-cell">
+                    {transaction.monthPaidFor}
+                  </TableCell>
+                  <TableCell className="font-semibold text-primary text-xs sm:text-sm">
+                    <div>
+                      ${transaction.amount.toFixed(2)}
+                      <div className="lg:hidden">
+                        <Badge 
+                          variant={transaction.paymentMethod === 'cash' ? 'secondary' : 'default'}
+                          className="text-xs mt-1"
+                        >
+                          {transaction.paymentMethod === 'cash' ? 'Cash' : 'MoMo'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs sm:text-sm hidden lg:table-cell">
                     <Badge 
                       variant={transaction.paymentMethod === 'cash' ? 'secondary' : 'default'}
-                      className={transaction.paymentMethod === 'cash' 
-                        ? 'bg-gray-100 text-gray-800' 
-                        : 'bg-blue-100 text-blue-800'
-                      }
                     >
                       {transaction.paymentMethod === 'cash' ? 'Cash' : 'Mobile Money'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs sm:text-sm hidden lg:table-cell">
                     {transaction.momoTransactionId || '-'}
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-2 justify-center">
+                    <div className="flex gap-1 sm:gap-2 justify-center">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onEdit(transaction)}
-                        className="border-green-300 text-green-700 hover:bg-green-50"
+                        className="h-8 w-8 p-0"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-red-300 text-red-700 hover:bg-red-50"
+                            className="h-8 w-8 p-0 border-destructive/50 text-destructive hover:bg-destructive/10"
                           >
-                            <Delete className="w-4 h-4" />
+                            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-white">
+                        <AlertDialogContent className="bg-card">
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
                             <AlertDialogDescription>
@@ -115,7 +135,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => onDelete(transaction.id)}
-                              className="bg-red-600 hover:bg-red-700"
+                              className="bg-destructive hover:bg-destructive/90"
                             >
                               Delete
                             </AlertDialogAction>

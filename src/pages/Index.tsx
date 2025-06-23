@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import PaymentForm from "@/components/PaymentForm";
 import TransactionTable from "@/components/TransactionTable";
 import LoginForm from "@/components/LoginForm";
 import PasswordSettings from "@/components/PasswordSettings";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Transaction } from "@/types/transaction";
 import { exportToExcel } from "@/utils/excelExport";
 import { toast } from "@/hooks/use-toast";
@@ -117,23 +117,23 @@ const Index = () => {
   }, {} as Record<string, number>);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-muted/40 p-2 sm:p-4 lg:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="flex justify-between items-center">
-            <div className="flex-1" />
-            <div className="flex-1 text-center">
-              <h1 className="text-4xl font-bold text-green-800">Rent Roll Tracker Pro</h1>
-              <p className="text-green-600 text-lg">Manage your rental income with ease</p>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex-1 text-center sm:text-left">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">Rent Roll Tracker Pro</h1>
+              <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">Manage your rental income with ease</p>
             </div>
-            <div className="flex-1 flex justify-end gap-2">
+            <div className="flex justify-center sm:justify-end gap-2 flex-wrap">
+              <ThemeToggle />
               <PasswordSettings />
               <Button 
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="border-red-300 text-red-700 hover:bg-red-50"
+                className="border-destructive/50 text-destructive hover:bg-destructive/10"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
@@ -143,35 +143,35 @@ const Index = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-white/80 backdrop-blur-sm border-green-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <Card className="bg-card/80 backdrop-blur-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-green-700">Total Income</CardTitle>
+              <CardTitle className="text-sm sm:text-base">Total Income</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-800">
+              <div className="text-xl sm:text-2xl font-bold text-primary">
                 ${totalIncome.toFixed(2)}
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-white/80 backdrop-blur-sm border-green-200">
+          <Card className="bg-card/80 backdrop-blur-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-green-700">Total Transactions</CardTitle>
+              <CardTitle className="text-sm sm:text-base">Total Transactions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-800">
+              <div className="text-xl sm:text-2xl font-bold text-primary">
                 {transactions.length}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-green-200">
+          <Card className="bg-card/80 backdrop-blur-sm sm:col-span-2 lg:col-span-1">
             <CardHeader className="pb-2">
-              <CardTitle className="text-green-700">Active Customers</CardTitle>
+              <CardTitle className="text-sm sm:text-base">Active Customers</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-800">
+              <div className="text-xl sm:text-2xl font-bold text-primary">
                 {new Set(transactions.map(t => t.customerName)).size}
               </div>
             </CardContent>
@@ -179,42 +179,45 @@ const Index = () => {
         </div>
 
         {/* Main Content */}
-        <Card className="bg-white/90 backdrop-blur-sm border-green-200">
+        <Card className="bg-card/90 backdrop-blur-sm">
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
-                <CardTitle className="text-green-800">Rent Management</CardTitle>
-                <CardDescription>Track and manage your rental payments</CardDescription>
+                <CardTitle>Rent Management</CardTitle>
+                <CardDescription className="text-sm">Track and manage your rental payments</CardDescription>
               </div>
               <Button 
                 onClick={handleExportToExcel}
                 variant="outline"
-                className="border-green-300 text-green-700 hover:bg-green-50"
+                size="sm"
+                className="w-full sm:w-auto"
               >
                 <FileSpreadsheet className="w-4 h-4 mr-2" />
                 Export to Excel
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-green-100">
+              <TabsList className="grid w-full grid-cols-2 bg-muted">
                 <TabsTrigger 
                   value="add-payment" 
-                  className="data-[state=active]:bg-green-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Payment
+                  <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="hidden xs:inline">Add Payment</span>
+                  <span className="xs:hidden">Add</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="transactions"
-                  className="data-[state=active]:bg-green-600 data-[state=active]:text-white"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
                 >
-                  Transaction List
+                  <span className="hidden xs:inline">Transaction List</span>
+                  <span className="xs:hidden">List</span>
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="add-payment" className="mt-6">
+              <TabsContent value="add-payment" className="mt-4 sm:mt-6">
                 <PaymentForm 
                   onSubmit={editingTransaction ? handleUpdateTransaction : handleAddTransaction}
                   editingTransaction={editingTransaction}
@@ -222,7 +225,7 @@ const Index = () => {
                 />
               </TabsContent>
               
-              <TabsContent value="transactions" className="mt-6">
+              <TabsContent value="transactions" className="mt-4 sm:mt-6">
                 <TransactionTable 
                   transactions={transactions}
                   onEdit={handleEditTransaction}
