@@ -62,7 +62,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             </TableHeader>
             <TableBody>
               {transactions.map((transaction) => (
-                <TableRow key={transaction.id} className="hover:bg-muted/50">
+                <TableRow key={transaction.id} className="hover:bg-purple-600 hover:bg-opacity-10 duration-700 transition-colors">
                   <TableCell className="font-medium text-xs sm:text-sm">
                     <div>
                       <div>{transaction.customerName}</div>
@@ -118,7 +118,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 w-8 p-0 border-destructive/50 text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 p-0 border-destructive/50 text-destructive hover:border-purple-500 hover:bg-purple-600"
                           >
                             <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                           </Button>

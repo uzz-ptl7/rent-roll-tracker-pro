@@ -335,7 +335,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-background">
+    <div className="min-h-screen px-6 py-10 bg-background">
       <Card>
         <CardHeader className="flex justify-between items-center">
           <div>
@@ -343,7 +343,7 @@ const Index = () => {
             <CardDescription>Manage your rental income with ease</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleExportToExcel} variant="outline" size="sm" className="flex items-center">
+            <Button onClick={handleExportToExcel} variant="outline" size="sm" className="flex items-center hover:border-purple-600 duration-700">
               <FileSpreadsheet className="w-4 h-4 mr-2" />
               Export to Excel
             </Button>
@@ -351,7 +351,7 @@ const Index = () => {
               onClick={handleLogout}
               variant="outline"
               size="sm"
-              className="border-destructive/50 text-destructive hover:bg-destructive/10"
+              className="border-destructive/50 text-destructive hover:bg-none hover:border-purple-600 duration-700"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
