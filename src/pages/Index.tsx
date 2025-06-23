@@ -1,19 +1,38 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, FileSpreadsheet } from "lucide-react";
+import { Plus, FileSpreadsheet, LogOut } from "lucide-react";
 import PaymentForm from "@/components/PaymentForm";
 import TransactionTable from "@/components/TransactionTable";
+import LoginForm from "@/components/LoginForm";
+import PasswordSettings from "@/components/PasswordSettings";
 import { Transaction } from "@/types/transaction";
 import { exportToExcel } from "@/utils/excelExport";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
+  const { isAuthenticated, logout, saveTransactions, loadTransactions } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [activeTab, setActiveTab] = useState("add-payment");
+
+  // Load transactions from localStorage when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const loadedTransactions = loadTransactions();
+      setTransactions(loadedTransactions);
+    }
+  }, [isAuthenticated, loadTransactions]);
+
+  // Save transactions to localStorage whenever transactions change
+  useEffect(() => {
+    if (isAuthenticated && transactions.length >= 0) {
+      saveTransactions(transactions);
+    }
+  }, [transactions, isAuthenticated, saveTransactions]);
 
   const handleAddTransaction = (transaction: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
@@ -74,6 +93,22 @@ const Index = () => {
     });
   };
 
+  const handleLogout = () => {
+    logout();
+    setTransactions([]);
+    setEditingTransaction(null);
+    setActiveTab("add-payment");
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+  };
+
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
+
   const totalIncome = transactions.reduce((sum, t) => sum + t.amount, 0);
   const monthlyStats = transactions.reduce((acc, t) => {
     const key = t.monthPaidFor;
@@ -86,8 +121,25 @@ const Index = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-green-800">Rent Roll Tracker Pro</h1>
-          <p className="text-green-600 text-lg">Manage your rental income with ease</p>
+          <div className="flex justify-between items-center">
+            <div className="flex-1" />
+            <div className="flex-1 text-center">
+              <h1 className="text-4xl font-bold text-green-800">Rent Roll Tracker Pro</h1>
+              <p className="text-green-600 text-lg">Manage your rental income with ease</p>
+            </div>
+            <div className="flex-1 flex justify-end gap-2">
+              <PasswordSettings />
+              <Button 
+                onClick={handleLogout}
+                variant="outline"
+                size="sm"
+                className="border-red-300 text-red-700 hover:bg-red-50"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
