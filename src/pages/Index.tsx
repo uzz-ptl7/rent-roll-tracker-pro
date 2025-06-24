@@ -12,11 +12,13 @@ import { FileSpreadsheet, LogOut } from "lucide-react";
 import PaymentForm from "@/components/PaymentForm";
 import { Transaction } from "@/types/transaction";
 import TransactionTable from "@/components/TransactionTable";
+import SignupForm from "@/components/SignupForm";
+import SummarySection from "@/components/SummarySection";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 
-const LoginForm: React.FC<{ onLoginSuccess: () => void }> = ({ onLoginSuccess }) => {
+const LoginForm: React.FC<{ onLoginSuccess: () => void; onShowSignup: () => void }> = ({ onLoginSuccess, onShowSignup }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,6 +78,14 @@ const LoginForm: React.FC<{ onLoginSuccess: () => void }> = ({ onLoginSuccess })
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Logging in..." : "Login"}
           </Button>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onShowSignup}
+            className="w-full"
+          >
+            Create New Account
+          </Button>
         </form>
       </CardContent>
     </Card>
@@ -88,6 +98,7 @@ const Index = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [activeTab, setActiveTab] = useState("add-payment");
   const [loading, setLoading] = useState(true);
+  const [showSignup, setShowSignup] = useState(false);
 
   // Fetch session and user on mount
   useEffect(() => {
@@ -327,7 +338,10 @@ const Index = () => {
   };
 
   if (!user) {
-    return <LoginForm onLoginSuccess={fetchTransactions} />;
+    if (showSignup) {
+      return <SignupForm onBackToLogin={() => setShowSignup(false)} />;
+    }
+    return <LoginForm onLoginSuccess={fetchTransactions} onShowSignup={() => setShowSignup(true)} />;
   }
 
   if (loading) {
@@ -359,6 +373,8 @@ const Index = () => {
           </div>
         </CardHeader>
         <CardContent>
+          <SummarySection transactions={transactions} />
+          
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="add-payment">Add Payment</TabsTrigger>
