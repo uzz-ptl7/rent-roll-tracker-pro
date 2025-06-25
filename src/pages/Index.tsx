@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -162,6 +163,15 @@ const Index = () => {
 
   // Handler to add a new transaction
   const handleAddTransaction = async (transaction: Transaction) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error } = await supabase.from("transactions").insert([
       {
         customername: transaction.customerName,
@@ -170,9 +180,11 @@ const Index = () => {
         paymentmethod: transaction.paymentMethod,
         amount: transaction.amount,
         momotransactionid: transaction.momoTransactionId,
+        user_id: user.id,
       },
     ]);
     if (error) {
+      console.error("Error adding transaction:", error);
       toast({
         title: "Error",
         description: "Failed to add transaction.",
@@ -190,6 +202,15 @@ const Index = () => {
 
   // Handler to update an existing transaction
   const handleUpdateTransaction = async (transaction: Transaction) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error } = await supabase
       .from("transactions")
       .update({
@@ -200,9 +221,11 @@ const Index = () => {
         amount: transaction.amount,
         momotransactionid: transaction.momoTransactionId,
       })
-      .eq("id", Number(transaction.id));
+      .eq("id", Number(transaction.id))
+      .eq("user_id", user.id);
 
     if (error) {
+      console.error("Error updating transaction:", error);
       toast({
         title: "Error",
         description: "Failed to update transaction.",
@@ -221,8 +244,23 @@ const Index = () => {
 
   // Handler to delete a transaction
   const handleDeleteTransaction = async (transactionId: string) => {
-    const { error } = await supabase.from("transactions").delete().eq("id", Number(transactionId));
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to delete transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("transactions")
+      .delete()
+      .eq("id", Number(transactionId))
+      .eq("user_id", user.id);
+      
     if (error) {
+      console.error("Error deleting transaction:", error);
       toast({
         title: "Error",
         description: "Failed to delete transaction.",
