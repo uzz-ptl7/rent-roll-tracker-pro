@@ -76,17 +76,19 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout }) => {
       return;
     }
 
-    const { error } = await supabase.from("transactions").insert([
-      {
-        customername: transaction.customerName,
-        paymentdate: transaction.paymentDate,
-        monthpaidfor: transaction.monthPaidFor,
-        paymentmethod: transaction.paymentMethod,
-        amount: transaction.amount,
-        momotransactionid: transaction.momoTransactionId,
-        user_id: user.id,
-      },
-    ]);
+    // Remove the id from the transaction object for insert
+    const { id, ...transactionData } = transaction;
+    
+    const { error } = await supabase.from("transactions").insert({
+      customername: transactionData.customerName,
+      paymentdate: transactionData.paymentDate,
+      monthpaidfor: transactionData.monthPaidFor,
+      paymentmethod: transactionData.paymentMethod,
+      amount: transactionData.amount,
+      momotransactionid: transactionData.momoTransactionId,
+      user_id: user.id,
+    });
+    
     if (error) {
       console.error("Error adding transaction:", error);
       toast({
